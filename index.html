@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Lua Deobfuscator - Luraph/IronBrew/Moonsec/Moonveil</title>
+    <style>
+        :root {
+            --bg: #050505; --panel: #0d0d0d; --border: #1f1f1f;
+            --cyan: #00e5ff; --red: #ff1744; --green: #00e676;
+            --yellow: #ffd600; --purple: #d500f9; --text: #b0b0b0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg); color: var(--text);
+            font-family: 'Segoe UI', 'Consolas', monospace;
+            min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; padding: 20px 0; }
+        .header h1 {
+            font-size: 2.2em;
+            background: linear-gradient(135deg, var(--purple), var(--cyan), var(--red));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header .sub { color: #555; font-size: 0.85em; margin-top: 5px; }
+        .badge-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+        .badge {
+            padding: 6px 14px; border-radius: 20px; font-size: 11px;
+            font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .badge-luraph { background: #1a0030; color: #d500f9; border: 1px solid #d500f9; }
+        .badge-ironbrew { background: #1a0a00; color: #ff6d00; border: 1px solid #ff6d00; }
+        .badge-moonsec { background: #001a1a; color: #00e5ff; border: 1px solid #00e5ff; }
+        .badge-moonveil { background: #0a001a; color: #651fff; border: 1px solid #651fff; }
+        .badge-psu { background: #1a0000; color: #ff1744; border: 1px solid #ff1744; }
+
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .panel {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 12px; padding: 18px;
+        }
+        .panel h2 {
+            font-size: 1em; margin-bottom: 12px; text-transform: uppercase;
+            letter-spacing: 2px; display: flex; align-items: center; gap: 8px;
+        }
+        .panel h2.cyan { color: var(--cyan); }
+        .panel h2.purple { color: var(--purple); }
+
+        textarea {
+            width: 100%; background: #000; border: 1px solid var(--border);
+            border-radius: 8px; color: #0f0; padding: 14px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px; resize: vertical; outline: none;
+            min-height: 350px;
+        }
+        textarea:focus { border-color: var(--purple); }
+        textarea::placeholder { color: #2a2a2a; }
+
+        .drop-zone {
+            border: 2px dashed #2a2a2a; border-radius: 10px;
+            padding: 20px; text-align: center; cursor: pointer;
+            transition: all 0.3s; margin-bottom: 12px; background: #080808;
+        }
+        .drop-zone:hover, .drop-zone.active { border-color: var(--purple); background: #0a0a10; }
+        .drop-zone .icon { font-size: 35px; }
+        .drop-zone p { color: #555; font-size: 13px; }
+        .drop-zone .small { font-size: 10px; color: #333; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        button {
+            padding: 11px 20px; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            transition: all 0.3s; text-transform: uppercase;
+            letter-spacing: 1.5px; font-family: 'Segoe UI', sans-serif;
+        }
+        .btn-deobf { background: linear-gradient(135deg, #d500f9, #651fff); color: #fff; flex: 1; }
+        .btn-deobf:hover { box-shadow: 0 0 30px rgba(213,0,249,0.5); }
+        .btn-clear { background: transparent; border: 1px solid #333; color: #777; }
+        .btn-clear:hover { border-color: var(--red); color: var(--red); }
+        .btn-copy { background: transparent; border: 1px solid var(--green); color: var(--green); }
+        .btn-copy:hover { background: var(--green); color: #000; }
+        .btn-dl { background: transparent; border: 1px solid var(--yellow); color: var(--yellow); }
+        .btn-dl:hover { background: var(--yellow); color: #000; }
+
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 12px; }
+        .info-card {
+            background: #080808; border: 1px solid var(--border);
+            border-radius: 6px; padding: 10px; text-align: center;
+        }
+        .info-card .val { font-size: 1.4em; font-weight: 700; }
+        .info-card .lbl { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+        .val.cyan { color: var(--cyan); }
+        .val.purple { color: var(--purple); }
+        .val.green { color: var(--green); }
+        .val.red { color: var(--red); }
+        .val.yellow { color: var(--yellow); }
+
+        .log-box {
+            background: #000; border: 1px solid #1a1a1a; border-radius: 8px;
+            padding: 10px; margin-top: 15px; max-height: 180px;
+            overflow-y: auto; font-size: 11px; font-family: 'Consolas', monospace;
+        }
+        .log-box .line { padding: 2px 0; }
+        .log-box .s { color: #0f0; }
+        .log-box .i { color: #0af; }
+        .log-box .w { color: #fa0; }
+        .log-box .e { color: #f00; }
+
+        input[type="file"] { display: none; }
+
+        .tab-row { display: flex; gap: 0; margin-bottom: 15px; }
+        .tab {
+            padding: 8px 16px; border: 1px solid var(--border);
+            background: #0a0a0a; color: #666; cursor: pointer;
+            font-size: 12px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1px; transition: all 0.2s;
+        }
+        .tab:first-child { border-radius: 6px 0 0 6px; }
+        .tab:last-child { border-radius: 0 6px 6px 0; }
+        .tab.active { background: var(--purple); color: #fff; border-color: var(--purple); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ ADVANCED LUA DEOBFUSCATOR</h1>
+            <p class="sub">Luraph • IronBrew • Moonsec • Moonveil • PSU • Xen • Aztup</p>
+            <div class="badge-row">
+                <span class="badge badge-luraph">Luraph v1-v4</span>
+                <span class="badge badge-ironbrew">IronBrew v1-v2</span>
+                <span class="badge badge-moonsec">Moonsec v1-v3</span>
+                <span class="badge badge-moonveil">Moonveil</span>
+                <span class="badge badge-psu">PSU Obfuscator</span>
+            </div>
+        </div>
+
+        <!-- Tab selection -->
+        <div class="tab-row" id="tabRow">
+            <div class="tab active" data-tab="auto">🤖 AUTO DETECT</div>
+            <div class="tab" data-tab="luraph">Luraph</div>
+            <div class="tab" data-tab="ironbrew">IronBrew</div>
+            <div class="tab" data-tab="moonsec">Moonsec</div>
+            <div class="tab" data-tab="moonveil">Moonveil</div>
+            <div class="tab" data-tab="universal">🌐 Universal</div>
+        </div>
+
+        <div class="main-grid">
+            <!-- INPUT -->
+            <div class="panel">
+                <h2 class="purple">📥 INPUT - Paste or Drop Obfuscated Script</h2>
+                <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="icon">📂</div>
+                    <p>Drag & Drop .lua file here or Click</p>
+                    <p class="small">Luraph / IronBrew / Moonsec / Moonveil / PSU</p>
+                </div>
+                <input type="file" id="fileInput" accept=".lua,.txt,.luac" multiple>
+                <textarea id="inputCode" placeholder="Paste obfuscated script here...&#10;&#10;Luraph example:&#10;local v0=...;&#10;local v1=({...})[...];&#10;&#10;IronBrew example:&#10;return(function(...)&#10;local a,b,c=...&#10;&#10;Moonsec example:&#10;local a=loadstring(game:HttpGet(...))"></textarea>
+                <div class="btn-row">
+                    <button class="btn-deobf" onclick="deobfuscate()">🔓 DEOBFUSCATE NOW</button>
+                    <button class="btn-clear" onclick="clearAll()">🗑 CLEAR</button>
+                </div>
+            </div>
+
+            <!-- OUTPUT -->
+            <div class="panel">
+                <h2 class="cyan">📤 OUTPUT - Deobfuscated Code</h2>
+                <textarea id="outputCode" placeholder="Deobfuscated code will appear here..." readonly></textarea>
+                <div class="btn-row">
+                    <button class="btn-copy" onclick="copyOut()">📋 COPY</button>
+                    <button class="btn-dl" onclick="downloadOut()">💾 DOWNLOAD .LUA</button>
+                </div>
+                <div class="info-grid" id="infoGrid"></div>
+            </div>
+        </div>
+
+        <!-- LOG -->
+        <div class="log-box" id="logBox"></div>
+    </div>
+
+    <script>
+        // ============================================================
+        // GLOBALS
+        // ============================================================
+        const logBox = document.getElementById('logBox');
+        const inputEl = document.getElementById('inputCode');
+        const outputEl = document.getElementById('outputCode');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const infoGrid = document.getElementById('infoGrid');
+        let activeTab = 'auto';
+
+        // ============================================================
+        // LOGGING
+        // ============================================================
+        function log(msg, type = 'i') {
+            const line = document.createElement('div');
+            line.className = `line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logBox.appendChild(line);
+            logBox.scrollTop = logBox.scrollHeight;
+            while (logBox.children.length > 60) logBox.removeChild(logBox.firstChild);
+        }
+
+        // ============================================================
+        // TAB SWITCHING
+        // ============================================================
+        document.getElementById('tabRow').addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab')) {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                activeTab = e.target.dataset.tab;
+                log(`📌 Chế độ: ${e.target.textContent.trim()}`, 'i');
+            }
+        });
+
+        // ============================================================
+        // FILE UPLOAD
+        // ============================================================
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('active'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', () => {
+            handleFiles(fileInput.files);
+            fileInput.value = '';
+        });
+
+        async function handleFiles(files) {
+            for (const file of files) {
+                log(`📂 Loading: ${file.name} (${(file.size/1024).toFixed(1)}KB)`, 'i');
+                try {
+                    const text = await file.text();
+                    inputEl.value = text;
+                    log(`✅ Loaded: ${file.name}`, 's');
+                } catch (err) {
+                    log(`❌ Error reading: ${file.name}`, 'e');
+                }
+            }
+        }
+
+        // ============================================================
+        // OBFUSCATOR DETECTION ENGINE
+        // ============================================================
+        function detectObfuscator(code) {
+            if (!code || code.length < 10) return { type: 'empty', confidence: 0 };
+
+            const signatures = {
+                'Luraph v4': [
+                    /\blocal\s+\w+\s*=\s*\(\{[^}]*\}\)\s*\[/,  // Custom VM init
+                    /\\\d{1,3}\\?\d{1,3}\\?\d{1,3}/,              // Escaped bytecode
+                    /\w+\s*=\s*\(\d+\)\s*\{\s*\[/,
+                ],
+                'Luraph v1-v3': [
+                    /local\s+\w+\s*=\s*\{[^}]*\}\s*local\s+function/,
+                    /bit32\.(bxor|band|bor|bnot|rshift|lshift)/,
+                    /string\.(char|byte|sub)\s*\(/,
+                ],
+                'IronBrew v2': [
+                    /return\s*\(function\s*\([^)]*\)[\s\S]*?#\s*\{\s*\d+/,
+                    /\\x[0-9a-fA-F]{2}\\x[0-9a-fA-F]{2}/,
+                    /local\s+\w+\s*=\s*\{\s*\\x/,
+                ],
+                'IronBrew v1': [
+                    /return\s*\(function\(\.\.\.\)/,
+                    /local\s+\w+\s*=\s*\{\s*\\\d{1,3}/,
+                ],
+                'Moonsec v3': [
+                    /loadstring\s*\(\s*game:HttpGet\s*\(\s*["']https?:\/\//,
+                    /local\s+\w+\s*=\s*\\\d{1,3}/,
+                ],
+                'Moonsec v1-v2': [
+                    /loadstring\s*\(\s*game:HttpGet/,
+                    /local\s+\w+=\s*\(function\(\)/,
+                ],
+                'Moonveil': [
+                    /local\s+\w+\s*=\s*\{[^}]*\}\s*local\s+\w+\s*=\s*bit/,
+                    /0x[0-9a-fA-F]{2,8}\s*,\s*0x[0-9a-fA-F]{2,8}/,
+                    /\\u\{[0-9a-fA-F]+\}/,
+                ],
+                'PSU Obfuscator': [
+                    /local\s+\w+\s*=\s*\{\s*\[1\]\s*=\s*function/,
+                    /_G\[string\.char\s*\(/,
+                ],
+                'Xen': [
+                    /local\s+\w+\s*=\s*select\s*\(\s*\d+\s*,/,
+                    /local\s+\w+\s*=\s*rawget\s*\(\s*\w+\s*,/,
+                ],
+                'Aztup': [
+                    /local\s+\w+\s*=\s*\{\s*\["\d+"\]\s*=/,
+                    /string\.rep\s*\(\s*"[^"]*"\s*,/,
+                ],
+            };
+
+            let bestType = 'Unknown';
+            let bestConf = 0;
+
+            for (const [name, patterns] of Object.entries(signatures)) {
+                let matches = 0;
+                for (const pattern of patterns) {
+                    if (pattern.test(code)) matches++;
+                }
+                const conf = matches / patterns.length;
+                if (conf > bestConf) {
+                    bestConf = conf;
+                    bestType = name;
+                }
+            }
+
+            return { type: bestType, confidence: Math.round(bestConf * 100) };
+        }
+
+        // ============================================================
+        // STRING EXTRACTION
+        // ============================================================
+        function extractStrings(code) {
+            const strings = [];
+            // Normal strings
+            const normalPattern = /(["'])((?:(?!\1)[^\\]|\\.)*)\1/g;
+            let match;
+            while ((match = normalPattern.exec(code)) !== null) {
+                const str = match[2];
+                if (str.length > 2 && !strings.includes(str)) strings.push(str);
+            }
+            // Concatenated strings
+            const concatPattern = /(["'])([^"']+)\1\s*\.\.\s*(["'])([^"']+)\3/g;
+            while ((match = concatPattern.exec(code)) !== null) {
+                strings.push(match[2] + match[4]);
+            }
+            return strings;
+        }
+
+        // ============================================================
+        // CONSTANT TABLE EXTRACTION (LURAPH / IRONBREW)
+        // ============================================================
+        function extractConstantTable(code) {
+            const tables = [];
+            // Pattern: local NAME = { ... }
+            const tablePattern = /local\s+(\w+)\s*=\s*\{([^}]+)\}/g;
+            let match;
+            while ((match = tablePattern.exec(code)) !== null) {
+                const name = match[1];
+                const content = match[2];
+                const entries = content.split(',').map(e => e.trim());
+                tables.push({ name, entries, count: entries.length });
+            }
+            return tables;
+        }
+
+        // ============================================================
+        // VM OPCODE PATTERN EXTRACTION
+        // ============================================================
+        function extractVMOpcodes(code) {
+            const opcodes = [];
+            // Pattern: [OPCODE] = function(...)
+            const opPattern = /\[(\d+|0x[0-9a-fA-F]+)\]\s*=\s*function\s*\(/g;
+            let match;
+            while ((match = opPattern.exec(code)) !== null) {
+                opcodes.push(match[1]);
+            }
+            return opcodes;
+        }
+
+        // ============================================================
+        // LURAPH DEOBFUSCATOR
+        // ============================================================
+        function deobfuscateLuraph(code, version) {
+            let result = code;
+            const steps = [];
+
+            // Step 1: Extract constant table
+            const constTables = extractConstantTable(result);
+            if (constTables.length > 0) {
+                steps.push(`Found ${constTables.length} constant tables`);
+                // Try to replace references
+                for (const table of constTables) {
+                    const tableName = table.name;
+                    // Replace table[index] with actual values where possible
+                    const lookupPattern = new RegExp(`\\b${tableName}\\s*\\[\\s*(\\d+)\\s*\\]`, 'g');
+                    result = result.replace(lookupPattern, (match, idx) => {
+                        const i = parseInt(idx) - 1; // Lua 1-indexed
+                        if (i >= 0 && i < table.entries.length) {
+                            return table.entries[i];
+                        }
+                        return match;
+                    });
+                }
+                steps.push('Replaced constant table lookups');
+            }
+
+            // Step 2: Decode escaped byte sequences
+            result = result.replace(/\\(\d{1,3})/g, (m, num) => {
+                return String.fromCharCode(parseInt(num));
+            });
+            steps.push('Decoded escaped byte sequences');
+
+            // Step 3: Decode hex sequences
+            result = result.replace(/\\x([0-9a-fA-F]{2})/g, (m, hex) => {
+                return String.fromCharCode(parseInt(hex, 16));
+            });
+            steps.push('Decoded hex sequences');
+
+            // Step 4: Unwrap loadstring wrappers
+            const loadPatterns = [
+                /loadstring\s*\(\s*(['"])([\s\S]*?)\1\s*\)\s*\(\s*\)/g,
+                /load\s*\(\s*(['"])([\s\S]*?)\1\s*\)\s*\(\s*\)/g,
+            ];
+            for (const pattern of loadPatterns) {
+                const match = pattern.exec(result);
+                if (match && match[2] && match[2].length > 10) {
+                    result = match[2];
+                    steps.push('Unwrapped loadstring');
+                }
+            }
+
+            // Step 5: Basic beautify
+            result = beautifyCode(result);
+            steps.push('Beautified output');
+
+            return { code: result, steps, version };
+        }
+
+        // ============================================================
+        // IRONBREW DEOBFUSCATOR
+        // ============================================================
+        function deobfuscateIronBrew(code, version) {
+            let result = code;
+            const steps = [];
+
+            // Step 1: Find the main function return
+            const returnMatch = result.match(/return\s*\(function\s*\([^)]*\)([\s\S]*?)\)\s*\(/);
+            if (returnMatch) {
+                result = returnMatch[1];
+                steps.push('Extracted main function body');
+            }
+
+            // Step 2: Decode IronBrew's custom encoding
+            // IronBrew uses \xHH sequences extensively
+            result = result.replace(/\\x([0-9a-fA-F]{2})/g, (m, hex) => {
+                return String.fromCharCode(parseInt(hex, 16));
+            });
+            steps.push('Decoded IronBrew hex encoding');
+
+            // Step 3: Extract and resolve # { ... } constant tables
+            const hashTablePattern = /#\s*\{\s*([\d,\s]+)\s*\}/g;
+            result = result.replace(hashTablePattern, (match, nums) => {
+                const values = nums.split(',').map(n => parseInt(n.trim()));
+                return 'table: [' + values.join(', ') + ']';
+            });
+            steps.push('Resolved hash constant tables');
+
+            // Step 4: Decode numeric escape sequences
+            result = result.replace(/\\(\d{1,3})/g, (m, num) => {
+                return String.fromCharCode(parseInt(num));
+            });
+            steps.push('Decoded numeric escapes');
+
+            // Step 5: Beautify
+            result = beautifyCode(result);
+            steps.push('Beautified output');
+
+            return { code: result, steps, version };
+        }
+
+        // ============================================================
+        // MOONSEC DEOBFUSCATOR
+        // ============================================================
+        function deobfuscateMoonsec(code, version) {
+            let result = code;
+            const steps = [];
+
+            // Step 1: Extract from loadstring(HttpGet(...))
+            const webPattern = /loadstring\s*\(\s*game:HttpGet\s*\(\s*(['"])(https?:\/\/[^'"]+)\1\s*\)\s*\)\s*\(\s*\)/g;
+            const webMatch = webPattern.exec(result);
+            if (webMatch) {
+                steps.push(`Found remote URL: ${webMatch[2]}`);
+                result = `-- [Moonsec] Original fetched from: ${webMatch[2]}\n-- Cannot auto-fetch in browser. Paste raw fetched code for full deobfuscation.\n\n${result}`;
+            }
+
+            // Step 2: Decode escaped sequences
+            result = result.replace(/\\(\d{1,3})/g, (m, num) => {
+                return String.fromCharCode(parseInt(num));
+            });
+            steps.push('Decoded escaped sequences');
+
+            // Step 3: Beautify
+            result = beautifyCode(result);
+            steps.push('Beautified output');
+
+            return { code: result, steps, version };
+        }
+
+        // ============================================================
+        // MOONVEIL DEOBFUSCATOR
+        // ============================================================
+        function deobfuscateMoonveil(code, version) {
+            let result = code;
+            const steps = [];
+
+            // Step 1: Decode unicode escapes \u{XXXX}
+            result = result.replace(/\\u\{([0-9a-fA-F]+)\}/g, (m, hex) => {
+                return String.fromCodePoint(parseInt(hex, 16));
+            });
+            steps.push('Decoded Unicode escapes');
+
+            // Step 2: Decode hex bytes
+            result = result.replace(/\\x([0-9a-fA-F]{2})/g, (m, hex) => {
+                return String.fromCharCode(parseInt(hex, 16));
+            });
+            steps.push('Decoded hex bytes');
+
+            // Step 3: Extract bit operations (Moonveil uses bit manipulation heavily)
+            const bitOps = result.match(/bit32?\.(bxor|band|bor|bnot|rshift|lshift)\s*\([^)]+\)/g);
+            if (bitOps) {
+                steps.push(`Found ${bitOps.length} bit operations`);
+            }
+
+            // Step 4: Beautify
+            result = beautifyCode(result);
+            steps.push('Beautified output');
+
+            return { code: result, steps, version };
+        }
+
+        // ============================================================
+        // UNIVERSAL DEOBFUSCATOR (FALLBACK)
+        // ============================================================
+        function deobfuscateUniversal(code) {
+            let result = code;
+            const steps = [];
+
+            // Hex decode
+            result = result.replace(/\\x([0-9a-fA-F]{2})/g, (m, h) => String.fromCharCode(parseInt(h, 16)));
+            steps.push('Hex decode');
+
+            // Numeric escape decode
+            result = result.replace(/\\(\d{1,3})/g, (m, n) => String.fromCharCode(parseInt(n)));
+            steps.push('Numeric escape decode');
+
+            // Unicode decode
+            result = result.replace(/\\u\{([0-9a-fA-F]+)\}/g, (m, h) => String.fromCodePoint(parseInt(h, 16)));
+            steps.push('Unicode decode');
+
+            // Base64 decode if applicable
+            if (/^[A-Za-z0-9+/=]{100,}$/.test(result.trim())) {
+                try {
+                    const decoded = atob(result.trim());
+                    if (decoded.includes('function') || decoded.includes('local') || decoded.includes('\x1b')) {
+                        result = decoded;
+                        steps.push('Base64 decode');
+                    }
+                } catch (e) {}
+            }
+
+            // Loadstring unwrap
+            const loadMatch = result.match(/loadstring\s*\(\s*(['"])([\s\S]*?)\1\s*\)\s*\(\s*\)/);
+            if (loadMatch && loadMatch[2] && loadMatch[2].length > 20) {
+                result = loadMatch[2];
+                steps.push('Loadstring unwrap');
+            }
+
+            // Beautify
+            result = beautifyCode(result);
+            steps.push('Beautify');
+
+            return { code: result, steps, version: 'universal' };
+        }
+
+        // ============================================================
+        // BEAUTIFY ENGINE
+        // ============================================================
+        function beautifyCode(code) {
+            let result = code;
+
+            // Split statements
+            result = result.replace(/;(?!\n)/g, ';\n');
+            result = result.replace(/\bthen\b(?![\n\r])/gi, 'then\n');
+            result = result.replace(/\bdo\b(?![\n\r])/gi, 'do\n');
+
+            // Add newlines before keywords
+            const keywords = ['local function', 'function', 'if ', 'for ', 'while ', 'repeat', 'return'];
+            for (const kw of keywords) {
+                const regex = new RegExp(`([^\\n\\r])\\b(${kw.replace(/\s/g, '\\s')})\\b`, 'gi');
+                result = result.replace(regex, '$1\n$2');
+            }
+
+            // Add newline after end
+            result = result.replace(/\bend\b(?![\n\r\)\]\},;])/gi, 'end\n');
+
+            // Indent
+            const lines = result.split('\n');
+            let indent = 0;
+            const out = [];
+
+            for (let line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+
+                if (/^(end|until|else|elseif|\))/.test(trimmed)) {
+                    indent = Math.max(0, indent - 1);
+                }
+
+                out.push('\t'.repeat(indent) + trimmed);
+
+                if (/(function|if|for|while|do|repeat|then|else|elseif)\s*$/.test(trimmed) ||
+                    /(function|if|for|while|do|repeat|then|else|elseif)\s*[\w(]/.test(trimmed) &&
+                    !/\bend\b/.test(trimmed)) {
+                    indent = Math.min(indent + 1, 15);
+                }
+            }
+
+            return out.join('\n');
+        }
+
+        // ============================================================
+        // MAIN DEOBFUSCATE FUNCTION
+        // ============================================================
+        function deobfuscate() {
+            const input = inputEl.value.trim();
+            if (!input) { log('⚠️ No input! Paste script or upload file.', 'w'); return; }
+
+            const startTime = performance.now();
+            log('🔍 Analyzing script...', 'i');
+
+            // Detect obfuscator
+            const detection = detectObfuscator(input);
+            log(`🎯 Detected: ${detection.type} (${detection.confidence}% confidence)`, 'i');
+
+            let result;
+            let forceMode = activeTab !== 'auto';
+
+            if (forceMode) {
+                log(`📌 Forced mode: ${activeTab}`, 'w');
+            }
+
+            const targetType = forceMode ? activeTab : detection.type.toLowerCase();
+
+            // Choose deobfuscator
+            if (targetType.includes('luraph')) {
+                const ver = detection.type.includes('v4') ? 'v4' : 'v1-v3';
+                result = deobfuscateLuraph(input, ver);
+            } else if (targetType.includes('ironbrew')) {
+                const ver = detection.type.includes('v2') ? 'v2' : 'v1';
+                result = deobfuscateIronBrew(input, ver);
+            } else if (targetType.includes('moonsec')) {
+                const ver = detection.type.includes('v3') ? 'v3' : 'v1-v2';
+                result = deobfuscateMoonsec(input, ver);
+            } else if (targetType.includes('moonveil')) {
+                result = deobfuscateMoonveil(input, 'v1');
+            } else {
+                result = deobfuscateUniversal(input);
+            }
+
+            // Display output
+            outputEl.value = result.code;
+
+            // Log steps
+            if (result.steps) {
+                for (const step of result.steps) {
+                    log(`  ↳ ${step}`, 's');
+                }
+            }
+
+            const duration = Math.round(performance.now() - startTime);
+            log(`✅ Done in ${duration}ms | ${result.version || 'universal'}`, 's');
+
+            // Update info grid
+            const strings = extractStrings(input);
+            const constTables = extractConstantTable(input);
+            const opcodes = extractVMOpcodes(input);
+
+            infoGrid.innerHTML = `
+                <div class="info-card"><div class="val purple">${detection.type}</div><div class="lbl">Obfuscator</div></div>
+                <div class="info-card"><div class="val cyan">${detection.confidence}%</div><div class="lbl">Confidence</div></div>
+                <div class="info-card"><div class="val green">${strings.length}</div><div class="lbl">Strings Found</div></div>
+                <div class="info-card"><div class="val yellow">${constTables.length}</div><div class="lbl">Const Tables</div></div>
+                <div class="info-card"><div class="val red">${opcodes.length}</div><div class="lbl">VM Opcodes</div></div>
+                <div class="info-card"><div class="val cyan">${duration}ms</div><div class="lbl">Time</div></div>
+            `;
+        }
+
+        // ============================================================
+        // UTILITY BUTTONS
+        // ============================================================
+        function copyOut() {
+            const out = outputEl.value;
+            if (!out) { log('⚠️ Nothing to copy!', 'w'); return; }
+            navigator.clipboard.writeText(out).then(() => log('📋 Copied!', 's'))
+                .catch(() => { outputEl.select(); document.execCommand('copy'); log('📋 Copied (fallback)!', 's'); });
+        }
+
+        function downloadOut() {
+            const out = outputEl.value;
+            if (!out) { log('⚠️ Nothing to download!', 'w'); return; }
+            const blob = new Blob([out], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'deobfuscated_' + Date.now() + '.lua';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            log('💾 Downloaded!', 's');
+        }
+
+        function clearAll() {
+            inputEl.value = '';
+            outputEl.value = '';
+            infoGrid.innerHTML = '';
+            log('🗑 Cleared.', 'i');
+        }
+
+        // Keyboard shortcut
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); deobfuscate(); }
+        });
+
+        log('🚀 Advanced Deobfuscator Ready - Luraph/IronBrew/Moonsec/Moonveil', 's');
+        log('💡 Ctrl+Enter to Deobfuscate | Select tab for forced mode', 'i');
+    </script>
+</body>
+</html>
