@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lua Obfuscator Pro - Multi-Mode</title>
+    <style>
+        :root {
+            --bg: #050505; --panel: #0d0d0d; --border: #1f1f1f;
+            --cyan: #00e5ff; --red: #ff1744; --green: #00e676;
+            --yellow: #ffd600; --purple: #d500f9; --orange: #ff6d00;
+            --text: #b0b0b0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg); color: var(--text);
+            font-family: 'Segoe UI', 'Consolas', monospace;
+            min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; padding: 20px 0; }
+        .header h1 {
+            font-size: 2.2em;
+            background: linear-gradient(135deg, var(--red), var(--purple), var(--cyan));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header .sub { color: #555; font-size: 0.85em; margin-top: 4px; }
+        .badge-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+        .badge {
+            padding: 6px 14px; border-radius: 20px; font-size: 11px;
+            font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .b-luraph { background: #1a0030; color: #d500f9; border: 1px solid #d500f9; }
+        .b-ironbrew { background: #1a0a00; color: #ff6d00; border: 1px solid #ff6d00; }
+        .b-moonsec { background: #001a1a; color: #00e5ff; border: 1px solid #00e5ff; }
+        .b-moonveil { background: #0a001a; color: #651fff; border: 1px solid #651fff; }
+        .b-psu { background: #1a0000; color: #ff1744; border: 1px solid #ff1744; }
+        .b-xen { background: #001a00; color: #00e676; border: 1px solid #00e676; }
+
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+        .panel {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 12px; padding: 18px;
+        }
+        .panel h2 {
+            font-size: 1em; margin-bottom: 10px; text-transform: uppercase;
+            letter-spacing: 2px; display: flex; align-items: center; gap: 8px;
+        }
+        .h-cyan { color: var(--cyan); }
+        .h-red { color: var(--red); }
+
+        textarea {
+            width: 100%; background: #000; border: 1px solid var(--border);
+            border-radius: 8px; color: #0f0; padding: 14px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px; resize: vertical; outline: none;
+            min-height: 350px;
+        }
+        textarea:focus { border-color: var(--red); }
+        textarea::placeholder { color: #2a2a2a; }
+
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .mode-card {
+            background: #080808; border: 2px solid #1a1a1a; border-radius: 10px;
+            padding: 14px; cursor: pointer; text-align: center;
+            transition: all 0.3s;
+        }
+        .mode-card:hover { border-color: #444; background: #0d0d0d; }
+        .mode-card.active { border-color: var(--red); background: #100000; }
+        .mode-card .icon { font-size: 28px; margin-bottom: 6px; }
+        .mode-card .name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .mode-card .desc { font-size: 10px; color: #555; margin-top: 3px; }
+        .mode-card.active .name { color: var(--red); }
+        .mode-card.luraph-card.active { border-color: #d500f9; }
+        .mode-card.luraph-card.active .name { color: #d500f9; }
+        .mode-card.ironbrew-card.active { border-color: #ff6d00; }
+        .mode-card.ironbrew-card.active .name { color: #ff6d00; }
+        .mode-card.moonsec-card.active { border-color: #00e5ff; }
+        .mode-card.moonsec-card.active .name { color: #00e5ff; }
+        .mode-card.moonveil-card.active { border-color: #651fff; }
+        .mode-card.moonveil-card.active .name { color: #651fff; }
+        .mode-card.psu-card.active { border-color: #ff1744; }
+        .mode-card.psu-card.active .name { color: #ff1744; }
+        .mode-card.xen-card.active { border-color: #00e676; }
+        .mode-card.xen-card.active .name { color: #00e676; }
+
+        .opt-row {
+            display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+            margin-bottom: 10px;
+        }
+        .opt-row label {
+            font-size: 11px; color: #888; text-transform: uppercase;
+            letter-spacing: 1px; min-width: 100px;
+        }
+        input[type="text"], input[type="number"], select {
+            background: #0a0a0a; border: 1px solid var(--border);
+            border-radius: 6px; color: #fff; padding: 8px 12px;
+            font-size: 12px; outline: none; font-family: 'Consolas', monospace;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            border-color: var(--red);
+        }
+        input[type="range"] { width: 120px; accent-color: var(--red); }
+        .opt-val { font-size: 11px; color: var(--red); font-weight: 700; min-width: 30px; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        button {
+            padding: 11px 20px; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            transition: all 0.3s; text-transform: uppercase;
+            letter-spacing: 1.5px; font-family: 'Segoe UI', sans-serif;
+        }
+        .btn-obf { background: linear-gradient(135deg, #ff1744, #d500f9); color: #fff; flex: 1; }
+        .btn-obf:hover { box-shadow: 0 0 30px rgba(255,23,68,0.5); }
+        .btn-clear { background: transparent; border: 1px solid #333; color: #777; }
+        .btn-clear:hover { border-color: var(--red); color: var(--red); }
+        .btn-copy { background: transparent; border: 1px solid var(--green); color: var(--green); }
+        .btn-copy:hover { background: var(--green); color: #000; }
+        .btn-dl { background: transparent; border: 1px solid var(--yellow); color: var(--yellow); }
+        .btn-dl:hover { background: var(--yellow); color: #000; }
+
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-top: 12px; }
+        .info-card {
+            background: #080808; border: 1px solid var(--border);
+            border-radius: 6px; padding: 10px; text-align: center;
+        }
+        .info-card .val { font-size: 1.3em; font-weight: 700; }
+        .info-card .lbl { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+        .val-red { color: var(--red); }
+        .val-green { color: var(--green); }
+        .val-yellow { color: var(--yellow); }
+
+        .log-box {
+            background: #000; border: 1px solid #1a1a1a; border-radius: 8px;
+            padding: 10px; margin-top: 15px; max-height: 180px;
+            overflow-y: auto; font-size: 11px; font-family: 'Consolas', monospace;
+        }
+        .log-box .line { padding: 2px 0; }
+        .log-box .s { color: #0f0; } .log-box .i { color: #0af; }
+        .log-box .w { color: #fa0; } .log-box .e { color: #f00; }
+
+        details { margin-top: 12px; }
+        details summary {
+            font-size: 12px; color: #666; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        details .advanced { padding: 10px; background: #080808; border-radius: 6px; margin-top: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 LUA OBFUSCATOR PRO</h1>
+            <p class="sub">Luraph Style • IronBrew Style • Moonsec Style • Moonveil Style • PSU • Xen</p>
+            <div class="badge-row">
+                <span class="badge b-luraph">Luraph Style</span>
+                <span class="badge b-ironbrew">IronBrew Style</span>
+                <span class="badge b-moonsec">Moonsec Style</span>
+                <span class="badge b-moonveil">Moonveil Style</span>
+                <span class="badge b-psu">PSU Style</span>
+                <span class="badge b-xen">Xen Style</span>
+            </div>
+        </div>
+
+        <!-- MODE SELECTION -->
+        <div class="mode-grid" id="modeGrid">
+            <div class="mode-card luraph-card active" data-mode="luraph">
+                <div class="icon">🟣</div>
+                <div class="name">Luraph v4</div>
+                <div class="desc">Custom VM + Constants</div>
+            </div>
+            <div class="mode-card ironbrew-card" data-mode="ironbrew">
+                <div class="icon">🟠</div>
+                <div class="name">IronBrew v2</div>
+                <div class="desc">Hex + Hash Tables</div>
+            </div>
+            <div class="mode-card moonsec-card" data-mode="moonsec">
+                <div class="icon">🔵</div>
+                <div class="name">Moonsec v3</div>
+                <div class="desc">HttpGet + Loadstring</div>
+            </div>
+            <div class="mode-card moonveil-card" data-mode="moonveil">
+                <div class="icon">💜</div>
+                <div class="name">Moonveil</div>
+                <div class="desc">Unicode + BitOps</div>
+            </div>
+            <div class="mode-card psu-card" data-mode="psu">
+                <div class="icon">🔴</div>
+                <div class="name">PSU</div>
+                <div class="desc">Char Table + Rawget</div>
+            </div>
+            <div class="mode-card xen-card" data-mode="xen">
+                <div class="icon">🟢</div>
+                <div class="name">Xen</div>
+                <div class="desc">Select + Unpack</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- INPUT -->
+            <div class="panel">
+                <h2 class="h-red">📥 INPUT - Clean Lua Code</h2>
+                <textarea id="inputCode" placeholder="Paste your clean Lua script here...&#10;&#10;print('Hello World')&#10;local function add(a,b)&#10;    return a+b&#10;end&#10;print(add(5,3))"></textarea>
+                <div class="btn-row">
+                    <button class="btn-obf" id="btnObf" onclick="obfuscate()">🔒 OBFUSCATE NOW</button>
+                    <button class="btn-clear" onclick="clearAll()">🗑 CLEAR</button>
+                </div>
+            </div>
+
+            <!-- OUTPUT -->
+            <div class="panel">
+                <h2 class="h-cyan">📤 OUTPUT - Obfuscated Code</h2>
+                <textarea id="outputCode" placeholder="Obfuscated code will appear here..." readonly></textarea>
+                <div class="btn-row">
+                    <button class="btn-copy" onclick="copyOut()">📋 COPY</button>
+                    <button class="btn-dl" onclick="downloadOut()">💾 DOWNLOAD .LUA</button>
+                </div>
+                <div class="info-grid" id="infoGrid"></div>
+
+                <!-- ADVANCED OPTIONS -->
+                <details>
+                    <summary>⚙ ADVANCED OPTIONS</summary>
+                    <div class="advanced">
+                        <div class="opt-row">
+                            <label>Encryption Pass</label>
+                            <input type="text" id="optPass" value="Xita2026" style="width:150px;">
+                        </div>
+                        <div class="opt-row">
+                            <label>VM Complexity</label>
+                            <input type="range" id="optVM" min="1" max="10" value="7" oninput="document.getElementById('vmVal').textContent=this.value">
+                            <span class="opt-val" id="vmVal">7</span>
+                        </div>
+                        <div class="opt-row">
+                            <label>String Obf Level</label>
+                            <input type="range" id="optStr" min="1" max="5" value="4" oninput="document.getElementById('strVal').textContent=this.value">
+                            <span class="opt-val" id="strVal">4</span>
+                        </div>
+                        <div class="opt-row">
+                            <label>Junk Code</label>
+                            <input type="range" id="optJunk" min="0" max="100" value="30" oninput="document.getElementById('junkVal').textContent=this.value">
+                            <span class="opt-val" id="junkVal">30</span>
+                        </div>
+                        <div class="opt-row">
+                            <label>Anti Decompile</label>
+                            <select id="optAnti">
+                                <option value="high" selected>High (VM + Anti-Tamper)</option>
+                                <option value="medium">Medium (Obfuscate only)</option>
+                                <option value="low">Low (Minimal)</option>
+                            </select>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- LOG -->
+        <div class="log-box" id="logBox"></div>
+    </div>
+
+    <script>
+        // ============================================================
+        // GLOBALS
+        // ============================================================
+        const logBox = document.getElementById('logBox');
+        const inputEl = document.getElementById('inputCode');
+        const outputEl = document.getElementById('outputCode');
+        const infoGrid = document.getElementById('infoGrid');
+        let activeMode = 'luraph';
+
+        // ============================================================
+        // LOGGING
+        // ============================================================
+        function log(msg, type = 'i') {
+            const line = document.createElement('div');
+            line.className = `line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logBox.appendChild(line);
+            logBox.scrollTop = logBox.scrollHeight;
+            while (logBox.children.length > 80) logBox.removeChild(logBox.firstChild);
+        }
+
+        // ============================================================
+        // MODE SELECTION
+        // ============================================================
+        document.getElementById('modeGrid').addEventListener('click', (e) => {
+            const card = e.target.closest('.mode-card');
+            if (!card) return;
+            document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            activeMode = card.dataset.mode;
+            log(`📌 Mode: ${card.querySelector('.name').textContent}`, 'i');
+        });
+
+        // ============================================================
+        // UTILITY FUNCTIONS
+        // ============================================================
+        function randomName(len = 8) {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_';
+            let name = '';
+            const start = 'abcdefghijklmnopqrstuvwxyz_';
+            name += start[Math.floor(Math.random() * start.length)];
+            for (let i = 1; i < len; i++) {
+                name += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return name;
+        }
+
+        function randomHex(len = 4) {
+            let hex = '';
+            for (let i = 0; i < len; i++) {
+                hex += Math.floor(Math.random() * 16).toString(16);
+            }
+            return hex;
+        }
+
+        function toHex(str) {
+            let hex = '';
+            for (let i = 0; i < str.length; i++) {
+                hex += '\\x' + str.charCodeAt(i).toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
+
+        function toNumericEscape(str) {
+            let esc = '';
+            for (let i = 0; i < str.length; i++) {
+                esc += '\\' + str.charCodeAt(i);
+            }
+            return esc;
+        }
+
+        function toUnicodeEscape(str) {
+            let esc = '';
+            for (let i = 0; i < str.length; i++) {
+                esc += '\\u{' + str.charCodeAt(i).toString(16).padStart(4, '0') + '}';
+            }
+            return esc;
+        }
+
+        function xorEncrypt(str, key) {
+            let result = '';
+            for (let i = 0; i < str.length; i++) {
+                result += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+            }
+            return result;
+        }
+
+        function base64Encode(str) {
+            try {
+                return btoa(unescape(encodeURIComponent(str)));
+            } catch (e) {
+                return btoa(str);
+            }
+        }
+
+        function generateJunkCode(lines = 5) {
+            const junkTemplates = [
+                'local {VAR} = {VAL}',
+                'local function {FUNC}() return {VAL} end',
+                'local {VAR} = string.char({NUMS})',
+                'local {VAR} = {VAL}; {VAR} = {VAR} + 1',
+                'if true then local {VAR} = {VAL} end',
+                'local {VAR} = bit32.bxor({VAL1}, {VAL2})',
+                'repeat local {VAR} = {VAL} until true',
+                'for i=1,1 do local {VAR} = {VAL} end',
+            ];
+            let junk = '';
+            for (let i = 0; i < lines; i++) {
+                let template = junkTemplates[Math.floor(Math.random() * junkTemplates.length)];
+                template = template.replace(/\{VAR\}/g, randomName(6));
+                template = template.replace(/\{FUNC\}/g, randomName(8));
+                template = template.replace(/\{VAL\}/g, Math.floor(Math.random() * 99999));
+                template = template.replace(/\{VAL1\}/g, Math.floor(Math.random() * 255));
+                template = template.replace(/\{VAL2\}/g, Math.floor(Math.random() * 255));
+                template = template.replace(/\{NUMS\}/g, 
+                    Array.from({length: 3}, () => Math.floor(Math.random() * 255)).join(','));
+                junk += template + '\n';
+            }
+            return junk;
+        }
+
+        // ============================================================
+        // LURAPH STYLE OBFUSCATOR
+        // ============================================================
+        function obfuscateLuraph(code, pass, vmComplexity) {
+            let result = '';
+            const steps = [];
+            const varNames = {};
+
+            // Generate random variable names
+            const vCount = 10 + vmComplexity * 3;
+            const vars = Array.from({length: vCount}, () => randomName(12));
+            const mainVar = vars[0];
+            const constVar = vars[1];
+            const funcVar = vars[2];
+            const vmVar = vars[3];
+
+            // Step 1: Extract all strings and create constant table
+            const strings = [];
+            const stringRegex = /(["'])((?:(?!\1)[^\\]|\\.)*)\1/g;
+            let match;
+            let cleanCode = code;
+            while ((match = stringRegex.exec(code)) !== null) {
+                if (match[2].length > 0 && !strings.includes(match[2])) {
+                    strings.push(match[2]);
+                }
+            }
+
+            // Encode strings based on complexity
+            const encodedStrings = strings.map(s => {
+                const encrypted = xorEncrypt(s, pass);
+                if (vmComplexity > 7) return toUnicodeEscape(encrypted);
+                if (vmComplexity > 4) return toNumericEscape(encrypted);
+                return toHex(encrypted);
+            });
+
+            // Step 2: Build constant table
+            result += `-- Luraph v4 Style Obfuscation\n`;
+            result += `-- Generated by PainXita Obfuscator Pro\n\n`;
+            result += `local ${constVar} = {\n`;
+            for (let i = 0; i < encodedStrings.length; i++) {
+                result += `\t[${i + 1}] = "${encodedStrings[i]}",\n`;
+            }
+            // Add numeric constants
+            for (let i = 0; i < vmComplexity * 5; i++) {
+                result += `\t[${encodedStrings.length + i + 1}] = ${Math.floor(Math.random() * 999999) + 1000},\n`;
+            }
+            result += `}\n\n`;
+
+            // Step 3: Create VM-like decode function
+            result += `local ${funcVar} = function(key)\n`;
+            result += `\tlocal pass = "${toHex(pass)}"\n`;
+            result += `\tlocal decoded = ${constVar}[key]\n`;
+            result += `\tif decoded then\n`;
+            result += `\t\tlocal result = ""\n`;
+            result += `\t\tfor i = 1, #decoded do\n`;
+            result += `\t\t\tlocal b = string.byte(decoded, i)\n`;
+            result += `\t\t\tb = bit32.bxor(b, string.byte(pass, ((i-1) % #pass) + 1))\n`;
+            result += `\t\t\tresult = result .. string.char(b)\n`;
+            result += `\t\tend\n`;
+            result += `\t\treturn result\n`;
+            result += `\tend\n`;
+            result += `\treturn key\n`;
+            result += `end\n\n`;
+
+            // Step 4: Wrap original code
+            // Replace strings with table lookups
+            let wrappedCode = cleanCode;
+            for (let i = 0; i < strings.length; i++) {
+                const escaped = strings[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(["'])${escaped}\\1`, 'g');
+                wrappedCode = wrappedCode.replace(regex, `${funcVar}(${i + 1})`);
+            }
+
+            // Step 5: Add junk code
+            const junkLines = parseInt(document.getElementById('optJunk').value) || 30;
+            result += generateJunkCode(junkLines) + '\n';
+
+            // Step 6: Main wrapper
+            result += `local ${mainVar} = (function()\n`;
+            result += wrappedCode.split('\n').map(l => '\t' + l).join('\n');
+            result += `\nend)()\n\n`;
+
+            // Step 7: Add anti-tamper if high
+            if (document.getElementById('optAnti').value === 'high') {
+                result += `-- Anti-Tamper\n`;
+                result += `local ${vmVar} = function()\n`;
+                result += `\tlocal check = string.byte("${toHex(pass)}", 1)\n`;
+                result += `\tif check ~= ${pass.charCodeAt(0).toString(16)} then\n`;
+                result += `\t\twhile true do end\n`;
+                result += `\tend\n`;
+                result += `end\n`;
+                result += `${vmVar}()\n`;
+            }
+
+            steps.push(`Encoded ${strings.length} strings`);
+            steps.push(`VM complexity: ${vmComplexity}/10`);
+            steps.push(`Junk lines: ${junkLines}`);
+
+            return { code: result, steps, mode: 'Luraph v4' };
+        }
+
+        // ============================================================
+        // IRONBREW STYLE OBFUSCATOR
+        // ============================================================
+        function obfuscateIronBrew(code, pass, vmComplexity) {
+            let result = '';
+            const steps = [];
+
+            // Encode whole code as hex
+            const hexCode = toHex(code);
+            const numericCode = toNumericEscape(code);
+
+            // Generate random names
+            const a = randomName(8);
+            const b = randomName(8);
+            const c = randomName(10);
+            const d = randomName(6);
+
+            result += `-- IronBrew v2 Style Obfuscation\n`;
+            result += `-- Generated by PainXita Obfuscator Pro\n\n`;
+
+            // Hash table style constant
+            const keyBytes = [];
+            for (let i = 0; i < pass.length; i++) {
+                keyBytes.push(pass.charCodeAt(i));
+            }
+            const hashValue = keyBytes.reduce((a, b) => a + b, 0) % 256;
+
+            result += `local ${a} = # { ${keyBytes.join(', ')} }\n`;
+            result += `local ${b} = {\n`;
+            result += `\t"${numericCode.substring(0, Math.min(500, numericCode.length))}"`;
+
+            // Split long codes
+            if (numericCode.length > 500) {
+                for (let i = 500; i < numericCode.length; i += 500) {
+                    result += `,\n\t"${numericCode.substring(i, i + 500)}"`;
+                }
+            }
+            result += `\n}\n\n`;
+
+            // Decode function
+            result += `local ${c} = function(...)\n`;
+            result += `\tlocal ${d} = ""\n`;
+            result += `\tfor i = 1, #${b} do\n`;
+            result += `\t\t${d} = ${d} .. ${b}[i]\n`;
+            result += `\tend\n`;
+            result += `\tlocal decoded = ""\n`;
+            result += `\tfor i = 1, #${d} do\n`;
+            result += `\t\tlocal byte = string.byte(${d}, i)\n`;
+            result += `\t\tdecoded = decoded .. string.char(byte)\n`;
+            result += `\tend\n`;
+            result += `\treturn loadstring(decoded)()\n`;
+            result += `end\n\n`;
+
+            // Junk
+            const junkLines = parseInt(document.getElementById('optJunk').value) || 30;
+            result += generateJunkCode(junkLines) + '\n';
+
+            result += `return ${c}()\n`;
+
+            steps.push(`Hex encoded ${code.length} chars`);
+            steps.push(`Hash key: 0x${hashValue.toString(16)}`);
+            steps.push(`Junk lines: ${junkLines}`);
+
+            return { code: result, steps, mode: 'IronBrew v2' };
+        }
+
+        // ============================================================
+        // MOONSEC STYLE OBFUSCATOR
+        // ============================================================
+        function obfuscateMoonsec(code, pass, vmComplexity) {
+            let result = '';
+            const steps = [];
+
+            const encoded = base64Encode(xorEncrypt(code, pass));
+            const varName = randomName(10);
+            const funcName = randomName(8);
+
+            result += `-- Moonsec v3 Style Obfuscation\n`;
+            result += `-- Generated by PainXita Obfuscator Pro\n\n`;
+
+            result += `local ${varName} = "${encoded}"\n`;
+            result += `local ${funcName} = function(data, key)\n`;
+            result += `\tlocal decoded = ""\n`;
+            result += `\tdata = game:HttpGet and data or data\n`;
+            result += `\tfor i = 1, #data do\n`;
+            result += `\t\tlocal b = string.byte(data, i)\n`;
+            result += `\t\tb = bit32.bxor(b, string.byte(key, ((i-1) % #key) + 1))\n`;
+            result += `\t\tdecoded = decoded .. string.char(b)\n`;
+            result += `\tend\n`;
+            result += `\treturn decoded\n`;
+            result += `end\n\n`;
+
+            const junkLines = parseInt(document.getElementById('optJunk').value) || 30;
+            result += generateJunkCode(junkLines) + '\n';
+
+            result += `loadstring(${funcName}(${varName}, "${pass}"))()\n`;
+
+            steps.push(`Base64 + XOR encoded`);
+            steps.push(`Pass: ${pass}`);
+            steps.push(`Junk lines: ${junkLines}`);
+
+            return { code: result, steps, mode: 'Moonsec v3' };
+        }
+
+        // ============================================================
+        // MOONVEIL STYLE OBFUSCATOR
+        // ============================================================
+        function obfuscateMoonveil(code, pass, vmComplexity) {
+            let result = '';
+            const steps = [];
+
+            const unicodeEncoded = toUnicodeEscape(xorEncrypt(code, pass));
+            const vars = Array.from({length: 5}, () => randomName(12));
+
+            result += `-- Moonveil Style Obfuscation\n`;
+            result += `-- Generated by PainXita Obfuscator Pro\n\n`;
+
+            result += `local ${vars[0]} = "${unicodeEncoded.substring(0, 200)}"\n`;
+            result += `local ${vars[1]} = bit32\n`;
+            result += `local ${vars[2]} = string\n`;
+            result += `local ${vars[3]} = function(s, k)\n`;
+            result += `\tlocal r = ""\n`;
+            result += `\tfor i = 1, #s do\n`;
+            result += `\t\tlocal b = ${vars[2]}.byte(s, i)\n`;
+            result += `\t\tb = ${vars[1]}.bxor(b, ${vars[2]}.byte(k, ((i-1) % #k) + 1))\n`;
+            result += `\t\tr = r .. ${vars[2]}.char(b)\n`;
+            result += `\tend\n`;
+            result += `\treturn r\n`;
+            result += `end\n\n`;
+
+            const junkLines = parseInt(document.getElementById('optJunk').value) || 30;
+            result += generateJunkCode(junkLines) + '\n';
+
+            result += `loadstring(${vars[3]}(${vars[0]}, "${pass}"))()\n`;
+
+            steps.push(`Unicode escaped + XOR`);
+            steps.push(`Bit operations used`);
+            steps.push(`Junk lines: ${junkLines}`);
+
+            return { code: result, steps, mode: 'Moonveil' };
+        }
+
+        // ============================================================
+        // PSU STYLE OBFUSCATOR
+        // ============================================================
+        function obfuscatePSU(code, pass, vmComplexity) {
+            let result = '';
+            const steps = [];
+
+            // Create char table
+            const charMap = {};
+            const uniqueChars = [...new Set(code.split(''))];
+            uniqueChars.forEach((ch, i) => {
+                charMap[ch] = i + 1;
+            });
+
+            result += `-- PSU Style Obfuscation\n`;
+            result += `-- Generated by PainXita Obfuscator Pro\n\n`;
+
+            result += `local _G = _G or getfenv()\n`;
+            result += `local tbl = {\n`;
+            for (const [ch, idx] of Object.entries(charMap)) {
+                result += `\t[${idx}] = "${toHex(ch)}",\n`;
+            }
+            result += `}\n\n`;
+
+            result += `local function decode()\n`;
+            result += `\tlocal chars = {\n`;
+            const codeBytes = [];
+            for (let i = 0; i < code.length; i++) {
+                codeBytes.push(charMap[code[i]]);
+            }
+            result += `\t\t${codeBytes.join(', ')}\n`;
+            result += `\t}\n`;
+            result += `\tlocal result = ""\n`;
+            result += `\tfor i = 1, #chars do\n`;
+            result += `\t\tresult = result .. _G[string.char](tbl[chars[i]])\n`;
+            result += `\tend\n`;
+            result += `\treturn loadstring(result)()\n`;
+            result += `end\n\n`;
+
+            const junkLines = parseInt(document.getElementById('optJunk').value) || 30;
+            result += generateJunkCode(junkLines) + '\n';
+
+            result += `decode()\n`;
+
+            steps.push(`Char table: ${uniqueChars.length} unique chars`);
+            steps.push(`Code bytes: ${codeBytes.length}`);
+            steps.push(`Junk lines: ${junkLines}`);
+
+            return { code: result, steps, mode: 'PSU' };
+        }
+
+        // ============================================================
+        // XEN STYLE OBFUSCATOR
+        // ============================================================
+        function obfuscateXen(code, pass, vmComplexity) {
+            let result = '';
+            const steps = [];
+
+            const chunks = [];
+            const chunkSize = Math.ceil(code.length / (vmComplexity * 3));
+            for (let i = 0; i < code.length; i += chunkSize) {
+                chunks.push(code.substring(i, i + chunkSize));
+            }
+
+            const vars = Array.from({length: 4}, () => randomName(10));
+
+            result += `-- Xen Style Obfuscation\n`;
+            result += `-- Generated by PainXita Obfuscator Pro\n\n`;
+
+            result += `local ${vars[0]} = {...}\n`;
+            result += `local ${vars[1]} = select\n`;
+            result += `local ${vars[2]} = rawget\n`;
+            result += `local ${vars[3]} = {\n`;
+            chunks.forEach((chunk, i) => {
+                result += `\t[${i + 1}] = "${toHex(chunk)}",\n`;
+            });
+            result += `}\n\n`;
+
+            result += `local function reconstruct()\n`;
+            result += `\tlocal parts = {}\n`;
+            result += `\tfor i = 1, #${vars[3]} do\n`;
+            result += `\t\tparts[i] = ${vars[3]}[i]\n`;
+            result += `\tend\n`;
+            result += `\treturn loadstring(table.concat(parts))()\n`;
+            result += `end\n\n`;
+
+            const junkLines = parseInt(document.getElementById('optJunk').value) || 30;
+            result += generateJunkCode(junkLines) + '\n';
+
+            result += `reconstruct()\n`;
+
+            steps.push(`Split into ${chunks.length} chunks`);
+            steps.push(`Chunk size: ${chunkSize}`);
+            steps.push(`Junk lines: ${junkLines}`);
+
+            return { code: result, steps, mode: 'Xen' };
+        }
+
+        // ============================================================
+        // MAIN OBFUSCATE FUNCTION
+        // ============================================================
+        function obfuscate() {
+            const input = inputEl.value.trim();
+            if (!input) {
+                log('⚠️ No input! Paste your Lua code.', 'w');
+                return;
+            }
+
+            const startTime = performance.now();
+            const pass = document.getElementById('optPass').value || 'Xita2026';
+            const vmComplexity = parseInt(document.getElementById('optVM').value) || 7;
+            const junkLines = parseInt(document.getElementById('optJunk').value) || 30;
+
+            log(`🔒 Obfuscating with ${activeMode.toUpperCase()} mode...`, 'i');
+            log(`   Pass: ${pass} | VM: ${vmComplexity} | Junk: ${junkLines}`, 'i');
+
+            let result;
+            switch (activeMode) {
+                case 'luraph':
+                    result = obfuscateLuraph(input, pass, vmComplexity);
+                    break;
+                case 'ironbrew':
+                    result = obfuscateIronBrew(input, pass, vmComplexity);
+                    break;
+                case 'moonsec':
+                    result = obfuscateMoonsec(input, pass, vmComplexity);
+                    break;
+                case 'moonveil':
+                    result = obfuscateMoonveil(input, pass, vmComplexity);
+                    break;
+                case 'psu':
+                    result = obfuscatePSU(input, pass, vmComplexity);
+                    break;
+                case 'xen':
+                    result = obfuscateXen(input, pass, vmComplexity);
+                    break;
+                default:
+                    result = obfuscateLuraph(input, pass, vmComplexity);
+            }
+
+            outputEl.value = result.code;
+
+            const duration = Math.round(performance.now() - startTime);
+            log(`✅ Done! Mode: ${result.mode} | ${duration}ms`, 's');
+            for (const step of result.steps) {
+                log(`  ↳ ${step}`, 's');
+            }
+
+            // Update info
+            infoGrid.innerHTML = `
+                <div class="info-card"><div class="val val-red">${result.mode}</div><div class="lbl">Mode</div></div>
+                <div class="info-card"><div class="val val-green">${input.length}</div><div class="lbl">Input Chars</div></div>
+                <div class="info-card"><div class="val val-yellow">${result.code.length}</div><div class="lbl">Output Chars</div></div>
+                <div class="info-card"><div class="val val-green">${(result.code.length/input.length).toFixed(2)}x</div><div class="lbl">Ratio</div></div>
+                <div class="info-card"><div class="val val-yellow">${duration}ms</div><div class="lbl">Time</div></div>
+            `;
+        }
+
+        // ============================================================
+        // UTILITY
+        // ============================================================
+        function copyOut() {
+            const out = outputEl.value;
+            if (!out) { log('⚠️ Nothing to copy!', 'w'); return; }
+            navigator.clipboard.writeText(out).then(() => log('📋 Copied!', 's'))
+                .catch(() => { outputEl.select(); document.execCommand('copy'); log('📋 Copied!', 's'); });
+        }
+
+        function downloadOut() {
+            const out = outputEl.value;
+            if (!out) { log('⚠️ Nothing to download!', 'w'); return; }
+            const blob = new Blob([out], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'obfuscated_' + activeMode + '_' + Date.now() + '.lua';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            log('💾 Downloaded!', 's');
+        }
+
+        function clearAll() {
+            inputEl.value = '';
+            outputEl.value = '';
+            infoGrid.innerHTML = '';
+            log('🗑 Cleared.', 'i');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); obfuscate(); }
+        });
+
+        log('🚀 Lua Obfuscator Pro Ready - 6 Modes', 's');
+        log('💡 Select mode → Paste code → Ctrl+Enter to Obfuscate', 'i');
+        log('⚠️ This is STYLE emulation, not identical to original obfuscators', 'w');
+    </script>
+</body>
+</html>
